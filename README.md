@@ -91,5 +91,5 @@ Authentication/
 ```
 MD Rubel
 💻 Full Stack MERN Developer
-📧 rubel.dev@example.com (Replace with your real email)
+📧 hmrubel0143@gmail.com
 ```
