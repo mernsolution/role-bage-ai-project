@@ -75,6 +75,67 @@ const checkUserNameAvailability = async (req, res) => {
   }
 };
 
+
+// const authLogin = async (req, res) => {
+//   const { username, password, rememberMe } = req.body;
+
+//   try {
+//     const user = await AuthModelData.findOne({ userName: username });
+
+//     if (!user) {
+//       return res.status(401).json({
+//         status: "failed",
+//         message: "User name not found. Please register or check your username.",
+//       });
+//     }
+
+//     const passwordMatch = await bcrypt.compare(password, user.password);
+
+//     if (!passwordMatch) {
+//       return res.status(401).json({
+//         status: "failed",
+//         message: "Incorrect password. Please try again.",
+//       });
+//     }
+
+//     const payload = {
+//       id: user._id,
+//       userName: user.userName,
+//     };
+
+//     const token = jwt.sign(
+//       payload,
+//       process.env.JWT_SECRET || "dfhdiru238437@#",
+//       {
+//         expiresIn: rememberMe ? "7d" : "30m",
+//       }
+//     );
+
+//     res.cookie("authToken", token, {
+//       httpOnly: true,
+//       secure: false,
+//       sameSite: "lax",
+//       maxAge: rememberMe ? 7 * 24 * 60 * 60 * 1000 : 30 * 60 * 1000,
+//       domain: ".localhost",
+//     });
+
+//     const { password: _, ...userData } = user._doc;
+
+//     return res.status(200).json({
+//       status: "success",
+//       message: "Login successful",
+//       token: token,
+//       data: userData,
+//     });
+//   } catch (error) {
+//     console.error("Login error:", error);
+//     return res.status(500).json({
+//       status: "error",
+//       message: "Server error, please try again later.",
+//     });
+//   }
+// };
+
 const authLogin = async (req, res) => {
   const { username, password, rememberMe } = req.body;
 
@@ -104,21 +165,20 @@ const authLogin = async (req, res) => {
 
     const token = jwt.sign(
       payload,
-      process.env.JWT_SECRET || "dfhdiru238437@#",
+      process.env.JWT_SECRET || "fallbacksecret",
       {
         expiresIn: rememberMe ? "7d" : "30m",
       }
     );
 
+res.cookie("authToken", token, {
+  httpOnly: true,
+  secure: false, // use true if HTTPS
+  sameSite: "lax", // "none" for secure + cross-domain
+  maxAge: rememberMe ? 7 * 24 * 60 * 60 * 1000 : 30 * 60 * 1000,
+  domain: ".localhost", // ✅ allows all *.localhost subdomains
+});
 
-    res.cookie("authToken", token, {
-      httpOnly: true,
-      secure: false,
-      sameSite: "lax",
-      domain: ".localhost",
-      path: "/",
-      maxAge: rememberMe ? 7 * 24 * 60 * 60 * 1000 : 30 * 60 * 1000,
-    });
 
     const { password: _, ...userData } = user._doc;
 
@@ -136,9 +196,11 @@ const authLogin = async (req, res) => {
     });
   }
 };
+
 const getShopNames = async (req, res) => {
   try {
     const token = req.cookies.authToken;
+
     if (!token) return res.status(401).json({ message: "Unauthorized" });
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -166,6 +228,7 @@ const logout = (req, res) => {
 };
 
 const checkSession = (req, res) => {
+  debugger
   const token = req.cookies.authToken;
   if (!token) {
     return res.status(401).json({

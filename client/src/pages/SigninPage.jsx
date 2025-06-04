@@ -31,6 +31,9 @@ const SigninPage = () => {
       }));
     }
   };
+ const handleSignUpClick = () => {
+    navigate('/sign-up');
+  };
 
   const validatePassword = (password) => {
     const hasNumber = /\d/.test(password);
@@ -168,7 +171,7 @@ const SigninPage = () => {
 
           <div className="text-center text-sm text-gray-600">
             Already have an account?{' '}
-            <a href="/sign-up" className="text-purple-600 hover:text-purple-800 font-medium">Sign Up</a>
+            <button     onClick={handleSignUpClick} className="text-purple-600 hover:text-purple-800 font-medium">Sign Up</button>
           </div>
         </div>
       </div>

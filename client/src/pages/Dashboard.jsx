@@ -36,17 +36,24 @@ const Dashboard = () => {
     fetchShopNames();
   }, []);
 
-  const handleClick = (shop) => {
-    // ✅ For local testing (no subdomain):
-    window.location.href = `/shop-dashboard?shop=${shop}`;
-    // const token = localStorage.getItem('authToken');
-    // if (token) {
-    //   // Pass token as URL parameter for initial authentication
-    //   window.location.href = `http://${shop}.localhost:5173/?token=${encodeURIComponent(token)}`;
-    // } else {
-    //   window.location.href = `http://${shop}.localhost:5173/`;
-    // }
-  };
+
+const handleClick = (shopName) => {
+   window.location.href = `http://${shopName}.localhost:5173/`;
+  // window.location.href = `https://${shopName.toLowerCase()}.mernsolution.com`;
+};
+
+
+  // const handleClick = (shop) => {
+  //   // ✅ For local testing (no subdomain):
+  //    window.location.href = `/shop-dashboard?shop=${shop}`;
+  //   // const token = localStorage.getItem('authToken');
+  //   // if (token) {
+  //   //   // Pass token as URL parameter for initial authentication
+  //   //   window.location.href = `http://${shop}.localhost:5173/?token=${encodeURIComponent(token)}`;
+  //   // } else {
+  //   //   window.location.href = `http://${shop}.localhost:5173/`;
+  //   // }
+  // };
 
   return (
     <div className="p-6 min-h-screen bg-gray-100">
