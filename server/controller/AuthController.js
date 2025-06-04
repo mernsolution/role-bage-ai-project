@@ -13,7 +13,6 @@ const userSignup = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-
     const newUser = new AuthModelData({
       userName: username,
       password: hashedPassword,
@@ -173,8 +172,8 @@ const authLogin = async (req, res) => {
 
 res.cookie("authToken", token, {
   httpOnly: true,
-  secure: false, // use true if HTTPS
-  sameSite: "lax", // "none" for secure + cross-domain
+  secure: true,
+  sameSite: "lax", 
   maxAge: rememberMe ? 7 * 24 * 60 * 60 * 1000 : 30 * 60 * 1000,
   domain: ".localhost", // ✅ allows all *.localhost subdomains
 });

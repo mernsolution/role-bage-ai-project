@@ -1,6 +1,5 @@
 // Update your axiosInstance configuration
 
-// https://backendauth.mernsolution.com/
 
 import axios from 'axios';
 
@@ -26,7 +25,7 @@ axiosInstance.interceptors.request.use(
   }
 );
 
-// Add response interceptor to handle authentication errors
+
 axiosInstance.interceptors.response.use(
   (response) => {
     return response;

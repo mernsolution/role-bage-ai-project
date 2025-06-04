@@ -144,8 +144,6 @@ const SigninPage = () => {
               </div>
               {errors.password && <p className="text-red-500 text-sm">{errors.password}</p>}
             </div>
-
-            {/* Agree to Terms */}
             <div className="flex items-center gap-2">
               <input
                 type="checkbox"
@@ -158,8 +156,6 @@ const SigninPage = () => {
               </label>
             </div>
             {errors.terms && <p className="text-red-500 text-sm">{errors.terms}</p>}
-
-            {/* Submit Button */}
             <button
               type="button"
               onClick={handleSubmit}
@@ -175,8 +171,6 @@ const SigninPage = () => {
           </div>
         </div>
       </div>
-
-      {/* Right Side - Dark Section */}
       <div className="flex-1 bg-gradient-to-br from-slate-900 via-gray-900 to-black flex items-center justify-center relative overflow-hidden">
         {/* Background Pattern */}
         <div className="absolute inset-0 opacity-10">
