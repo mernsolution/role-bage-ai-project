@@ -103,11 +103,14 @@ A full-stack web application that provides AI-powered text summarization with co
    PORT=5000
    ```
 
-4. **Start the application**
+4. **Start the backend application**
    ```bash
    npm start
    ```
-
+5. **Start the frontend application **
+   ```bash
+   npm run dev
+   ```
 ## 🔗 API Endpoints
 
 ### Authentication
@@ -235,4 +238,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Made with ❤️ by Md Rubel, full stak mern developer and author**
+**Made with ❤️ by Md Rubel, full stack mern developer and author**
