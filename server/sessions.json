@@ -1,0 +1,51 @@
+{
+  "session_1751016389995_9emqh3o2i": {
+    "id": "session_1751016389995_9emqh3o2i",
+    "messages": [
+      {
+        "id": "df5f9913-7396-4e08-8b4b-364e66ddf0a8",
+        "role": "user",
+        "content": "location",
+        "timestamp": "2025-06-27T09:34:39.830Z"
+      }
+    ],
+    "createdAt": "2025-06-27T09:34:39.829Z",
+    "lastActivity": "2025-06-27T09:34:39.830Z",
+    "title": "location"
+  },
+  "session_1751024271658_zo4o55s9r": {
+    "id": "session_1751024271658_zo4o55s9r",
+    "messages": [],
+    "createdAt": "2025-06-27T11:37:51.663Z",
+    "lastActivity": "2025-06-27T11:37:51.728Z",
+    "title": "New Conversation"
+  },
+  "9b6bd7d0-52ec-40cb-9b70-fe61540283e5": {
+    "id": "9b6bd7d0-52ec-40cb-9b70-fe61540283e5",
+    "messages": [
+      {
+        "id": "acfae904-4549-442d-a664-81cdb9628707",
+        "role": "user",
+        "content": "location?",
+        "timestamp": "2025-06-27T11:38:54.502Z"
+      }
+    ],
+    "createdAt": "2025-06-27T11:38:54.502Z",
+    "lastActivity": "2025-06-27T11:38:54.502Z",
+    "title": "location?"
+  },
+  "a031a113-f681-4384-bccb-b1b68887c5a4": {
+    "id": "a031a113-f681-4384-bccb-b1b68887c5a4",
+    "messages": [
+      {
+        "id": "edaa9b9f-9f29-4438-8693-b1f94e5fd93e",
+        "role": "user",
+        "content": "location?",
+        "timestamp": "2025-06-27T14:34:58.390Z"
+      }
+    ],
+    "createdAt": "2025-06-27T14:34:58.389Z",
+    "lastActivity": "2025-06-27T14:34:58.390Z",
+    "title": "location?"
+  }
+}

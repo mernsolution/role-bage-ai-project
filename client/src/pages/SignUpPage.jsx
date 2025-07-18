@@ -1,20 +1,29 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, Plus, X, Store, User, Lock } from 'lucide-react';
+import { Eye, EyeOff, User, Lock, Shield, Mail } from 'lucide-react';
 import axiosInstance from '../utility/baseURL';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 
 const SignupPage = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     username: '',
+    email: '',
     password: '',
-    shopNames: ['', '', '']
+    confirmPassword: '',
+    role: 'user'
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState({});
-  const [shopNameStatus, setShopNameStatus] = useState({});
-  const [usernameStatus, setUsernameStatus] = useState(null);
+
+  // Role options
+  const roles = [
+    { value: 'user', label: 'User', desc: 'Can manage own summaries', icon: User },
+    { value: 'admin', label: 'Admin', desc: 'Full system access', icon: Shield },
+    { value: 'editor', label: 'Editor', desc: 'Can edit/delete any summary', icon: Lock },
+    { value: 'reviewer', label: 'Reviewer', desc: 'Can view all summaries', icon: Eye }
+  ];
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
@@ -28,148 +37,104 @@ const SignupPage = () => {
         [field]: ''
       }));
     }
-
-    // Check username availability in real-time
-    if (field === 'username') {
-      checkUsernameAvailability(value);
-    }
-  };
-
-  const checkUsernameAvailability = async (username) => {
-    // Skip API call if empty
-    if (!username.trim()) {
-      setUsernameStatus(null);
-      return;
-    }
-
-    try {
-      const res = await axiosInstance.get(`/check-username?userName=${encodeURIComponent(username.trim())}`);
-      setUsernameStatus(res.data.available ? 'available' : 'not available');
-    } catch (error) {
-      console.error('Error checking username:', error);
-      setUsernameStatus('error');
-    }
-  };
-
-  const handleShopNameChange = async (index, value) => {
-    const newShopNames = [...formData.shopNames];
-    newShopNames[index] = value;
-
-    setFormData(prev => ({
-      ...prev,
-      shopNames: newShopNames
-    }));
-
-    // Skip API call if empty
-    if (!value.trim()) {
-      setShopNameStatus(prev => ({ ...prev, [index]: null }));
-      return;
-    }
-
-    try {
-      // Fixed: Send shopName as query parameter, not in body
-      const res = await axiosInstance.get(`/check-shop-name?shopName=${encodeURIComponent(value.trim())}`);
-
-      setShopNameStatus(prev => ({
-        ...prev,
-        [index]: res.data.available ? 'available' : 'not available'
-      }));
-    } catch (error) {
-      console.error('Error checking shop name:', error);
-      setShopNameStatus(prev => ({ ...prev, [index]: 'error' }));
-    }
-  };
-
-  const addShopName = () => {
-    if (formData.shopNames.length < 6) {
-      setFormData(prev => ({
-        ...prev,
-        shopNames: [...prev.shopNames, '']
-      }));
-    }
-  };
-
-  const removeShopName = (index) => {
-    if (formData.shopNames.length > 3) {
-      const newShopNames = formData.shopNames.filter((_, i) => i !== index);
-      const newStatus = { ...shopNameStatus };
-      delete newStatus[index];
-
-      setFormData(prev => ({
-        ...prev,
-        shopNames: newShopNames
-      }));
-      setShopNameStatus(newStatus);
-    }
   };
 
   const validatePassword = (password) => {
     const hasNumber = /\d/.test(password);
     const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`]/.test(password);
     const isLongEnough = password.length >= 8;
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
 
     return {
-      isValid: hasNumber && hasSpecialChar && isLongEnough,
+      isValid: hasNumber && hasSpecialChar && isLongEnough && hasUpperCase && hasLowerCase,
       hasNumber,
       hasSpecialChar,
-      isLongEnough
+      isLongEnough,
+      hasUpperCase,
+      hasLowerCase
     };
+  };
+
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
   };
 
   const validateForm = () => {
     const newErrors = {};
 
+    // Username validation
     if (!formData.username.trim()) {
       newErrors.username = 'Username is required';
-    } else if (usernameStatus === 'not available') {
-      newErrors.username = 'Username is already taken. Please choose a different username.';
+    } else if (formData.username.length < 3) {
+      newErrors.username = 'Username must be at least 3 characters';
     }
 
+    // Email validation
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!validateEmail(formData.email)) {
+      newErrors.email = 'Please enter a valid email address';
+    }
+
+    // Password validation
     if (!formData.password.trim()) {
       newErrors.password = 'Password is required';
     } else {
       const passwordValidation = validatePassword(formData.password);
       if (!passwordValidation.isValid) {
-        newErrors.password = 'Password must be at least 8 characters, contain at least one number, and one special character.';
+        newErrors.password = 'Password must meet all requirements';
       }
     }
 
-    const filledShops = formData.shopNames.filter(name => name.trim());
-    if (filledShops.length < 3) {
-      newErrors.shopNames = 'At least 3 shop names are required';
-    }
-
-    // Check if any shop names are not available
-    const unavailableShops = formData.shopNames.some((name, index) =>
-      name.trim() && shopNameStatus[index] === 'not available'
-    );
-    if (unavailableShops) {
-      newErrors.shopNames = 'Some shop names are not available. Please choose different names.';
+    // Confirm password validation
+    if (!formData.confirmPassword.trim()) {
+      newErrors.confirmPassword = 'Please confirm your password';
+    } else if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async () => {
-    if (validateForm()) {
-      const filledShopNames = formData.shopNames.filter(name => name.trim());
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  if (validateForm()) {
+    try {
+      const response = await axiosInstance.post("/signup", {
+        username: formData.username,
+        email: formData.email,
+        password: formData.password,
+        role: formData.role
+      });
 
-      try {
-        const response = await axiosInstance.post('/signup', {
-          username: formData.username,
-          password: formData.password,
-          shopNames: filledShopNames
-        });
-        navigate("/", { replace: true });
-        // alert(response.data.message || 'Account created!');
-        toast.success(response.data.message);
-      } catch (error) {
-        toast.error(error.response?.data?.message);
-        // alert(error.response?.data?.message || 'Error creating account');
+      if (response.status === 201) {
+        toast.success("Account created successfully");
+        console.log('Account created successfully');
+        navigate("/");
+      }
+    } catch (error) {
+      console.error('Signup error:', error);
+      
+      // Check if error response exists
+      if (error.response) {
+        // Server responded with error status
+        const errorMessage = error.response.data?.message || 'Registration failed';
+        toast.error(errorMessage);
+        console.log('Error status:', error.response.status);
+        console.log('Error data:', error.response.data);
+      } else if (error.request) {
+        // Network error
+        toast.error("Network error. Please try again.");
+      } else {
+        // Other error
+        toast.error("Something went wrong. Please try again.");
       }
     }
-  };
+  }
+};
 
   const passwordValidation = validatePassword(formData.password);
 
@@ -181,10 +146,10 @@ const SignupPage = () => {
           {/* Header */}
           <div className="text-center">
             <div className="mx-auto h-12 w-12 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full flex items-center justify-center mb-4">
-              <Store className="h-6 w-6 text-white" />
+              <Shield className="h-6 w-6 text-white" />
             </div>
             <h2 className="text-3xl font-bold text-gray-900 mb-2">Create Account</h2>
-            <p className="text-gray-600">Join us and start managing your shops</p>
+            <p className="text-gray-600">Join us and start managing your content</p>
           </div>
 
           {/* Form */}
@@ -199,37 +164,31 @@ const SignupPage = () => {
                 type="text"
                 value={formData.username}
                 onChange={(e) => handleInputChange('username', e.target.value)}
-                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-200 ${errors.username ? 'border-red-500' :
-                  usernameStatus === 'not available' ? 'border-red-300' :
-                    usernameStatus === 'available' ? 'border-green-300' : 'border-gray-300 hover:border-gray-400'
+                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-200 ${errors.username ? 'border-red-500' : 'border-gray-300 hover:border-gray-400'
                   }`}
                 placeholder="Enter your username"
               />
-              {/* Username Status Messages */}
-              {formData.username.trim() && (
-                <div className="px-1">
-                  {usernameStatus === 'available' && (
-                    <span className="text-green-600 text-xs flex items-center gap-1">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      This username is available
-                    </span>
-                  )}
-                  {usernameStatus === 'not available' && (
-                    <span className="text-red-600 text-xs flex items-center gap-1">
-                      <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                      This username is already taken
-                    </span>
-                  )}
-                  {usernameStatus === 'error' && (
-                    <span className="text-orange-600 text-xs flex items-center gap-1">
-                      <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                      Error checking availability
-                    </span>
-                  )}
-                </div>
-              )}
               {errors.username && (
                 <p className="text-red-500 text-sm">{errors.username}</p>
+              )}
+            </div>
+
+            {/* Email Field */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                <Mail className="h-4 w-4" />
+                Email
+              </label>
+              <input
+                type="email"
+                value={formData.email}
+                onChange={(e) => handleInputChange('email', e.target.value)}
+                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-200 ${errors.email ? 'border-red-500' : 'border-gray-300 hover:border-gray-400'
+                  }`}
+                placeholder="Enter your email"
+              />
+              {errors.email && (
+                <p className="text-red-500 text-sm">{errors.email}</p>
               )}
             </div>
 
@@ -264,6 +223,14 @@ const SignupPage = () => {
                     <div className={`w-2 h-2 rounded-full ${passwordValidation.isLongEnough ? 'bg-green-500' : 'bg-gray-300'}`}></div>
                     At least 8 characters
                   </div>
+                  <div className={`flex items-center gap-2 ${passwordValidation.hasUpperCase ? 'text-green-600' : 'text-gray-500'}`}>
+                    <div className={`w-2 h-2 rounded-full ${passwordValidation.hasUpperCase ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                    Contains uppercase letter
+                  </div>
+                  <div className={`flex items-center gap-2 ${passwordValidation.hasLowerCase ? 'text-green-600' : 'text-gray-500'}`}>
+                    <div className={`w-2 h-2 rounded-full ${passwordValidation.hasLowerCase ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                    Contains lowercase letter
+                  </div>
                   <div className={`flex items-center gap-2 ${passwordValidation.hasNumber ? 'text-green-600' : 'text-gray-500'}`}>
                     <div className={`w-2 h-2 rounded-full ${passwordValidation.hasNumber ? 'bg-green-500' : 'bg-gray-300'}`}></div>
                     Contains at least one number
@@ -274,87 +241,67 @@ const SignupPage = () => {
                   </div>
                 </div>
               )}
-
               {errors.password && (
                 <p className="text-red-500 text-sm">{errors.password}</p>
               )}
             </div>
 
-            {/* Shop Names */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                  <Store className="h-4 w-4" />
-                  Shop Names (minimum 3)
-                </label>
+            {/* Confirm Password Field */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                <Lock className="h-4 w-4" />
+                Confirm Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={formData.confirmPassword}
+                  onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                  className={`w-full px-4 py-3 pr-12 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-200 ${errors.confirmPassword ? 'border-red-500' : 'border-gray-300 hover:border-gray-400'
+                    }`}
+                  placeholder="Confirm your password"
+                />
                 <button
                   type="button"
-                  onClick={addShopName}
-                  disabled={formData.shopNames.length >= 6}
-                  className="flex items-center gap-1 text-purple-600 hover:text-purple-700 disabled:text-gray-400 text-sm font-medium"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
                 >
-                  <Plus className="h-4 w-4" />
-                  Add Shop
+                  {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
               </div>
-
-              <div className="space-y-3">
-                {formData.shopNames.map((shopName, index) => (
-                  <div key={index} className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={shopName}
-                        onChange={(e) => handleShopNameChange(index, e.target.value)}
-                        className={`flex-1 px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 hover:border-gray-400 transition-all duration-200 ${shopNameStatus[index] === 'not available' ? 'border-red-300' :
-                          shopNameStatus[index] === 'available' ? 'border-green-300' : 'border-gray-300'
-                          }`}
-                        placeholder={`Shop ${index + 1} name`}
-                      />
-                      {formData.shopNames.length > 3 && (
-                        <button
-                          type="button"
-                          onClick={() => removeShopName(index)}
-                          className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      )}
-                    </div>
-                    {/* Status Messages */}
-                    {shopName.trim() && (
-                      <div className="px-1">
-                        {shopNameStatus[index] === 'available' && (
-                          <span className="text-green-600 text-xs flex items-center gap-1">
-                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                            This name is available
-                          </span>
-                        )}
-                        {shopNameStatus[index] === 'not available' && (
-                          <span className="text-red-600 text-xs flex items-center gap-1">
-                            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                            This name is already taken
-                          </span>
-                        )}
-                        {shopNameStatus[index] === 'error' && (
-                          <span className="text-orange-600 text-xs flex items-center gap-1">
-                            <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                            Error checking availability
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {errors.shopNames && (
-                <p className="text-red-500 text-sm">{errors.shopNames}</p>
+              {errors.confirmPassword && (
+                <p className="text-red-500 text-sm">{errors.confirmPassword}</p>
               )}
+            </div>
 
-              <p className="text-xs text-gray-500">
-                Filled shops: {formData.shopNames.filter(name => name.trim()).length} / {formData.shopNames.length}
-              </p>
+            {/* Role Selection */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                <Shield className="h-4 w-4" />
+                Role
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {roles.map((role) => {
+                  const IconComponent = role.icon;
+                  return (
+                    <button
+                      key={role.value}
+                      type="button"
+                      onClick={() => handleInputChange('role', role.value)}
+                      className={`p-3 border rounded-lg text-left transition-all duration-200 ${formData.role === role.value
+                        ? 'border-purple-500 bg-purple-50 text-purple-700'
+                        : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
+                        }`}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <IconComponent className="h-4 w-4" />
+                        <span className="font-medium text-sm">{role.label}</span>
+                      </div>
+                      <p className="text-xs text-gray-600">{role.desc}</p>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Submit Button */}
@@ -392,19 +339,19 @@ const SignupPage = () => {
         <div className="text-center z-10 px-8">
           <div className="mb-8">
             <div className="mx-auto h-16 w-16 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center mb-6 shadow-2xl">
-              <Store className="h-8 w-8 text-white" />
+              <Shield className="h-8 w-8 text-white" />
             </div>
           </div>
 
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-6 leading-tight">
-            Manage Your
+            Secure Access
             <span className="block bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent">
-              Business Empire
+              Role-Based System
             </span>
           </h1>
 
           <p className="text-xl text-gray-300 max-w-md mx-auto leading-relaxed">
-            Connect all your shops in one powerful platform and take control of your retail success
+            Join our secure platform with role-based access control and manage your content with confidence
           </p>
 
           {/* Floating Elements */}

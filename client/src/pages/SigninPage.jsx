@@ -1,15 +1,15 @@
-
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Eye, EyeOff, Store, User, Lock } from 'lucide-react';
-import axiosInstance from '../utility/baseURL';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from "../context/AuthContext";
+import { useDispatch, useSelector } from 'react-redux';
+import { loginUser, clearError } from '../store/slices/slices';
 import { toast } from "react-toastify";
 
 const SigninPage = () => {
-  const { setIsAuthenticated } = useAuth();
+  const dispatch = useDispatch();
   const navigate = useNavigate();
+  const { loading, error, isAuthenticated } = useSelector((state) => state.auth);
+
   const [formData, setFormData] = useState({
     username: '',
     password: '',
@@ -17,6 +17,16 @@ const SigninPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [agreeTerms, setAgreeTerms] = useState(false);
+
+  useEffect(() => {
+    dispatch(clearError());
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard');
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
@@ -30,8 +40,13 @@ const SigninPage = () => {
         [field]: ''
       }));
     }
+
+    if (error) {
+      dispatch(clearError());
+    }
   };
- const handleSignUpClick = () => {
+
+  const handleSignUpClick = () => {
     navigate('/sign-up');
   };
 
@@ -60,35 +75,37 @@ const SigninPage = () => {
     } else {
       const passwordValidation = validatePassword(formData.password);
       if (!passwordValidation.isValid) {
-        newErrors.password = 'Password must be at least 8 characters.';
+        newErrors.password = 'Password must be at least 8 characters with numbers and special characters.';
       }
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (validateForm()) {
       try {
-        const response = await axiosInstance.post("/sign-in", {
+        const result = await dispatch(loginUser({
           username: formData.username,
           password: formData.password,
           rememberMe: agreeTerms,
-        });
+        }));
 
-        if (response.status === 200) {
-          toast.success(response.data.message);
-          setIsAuthenticated(true);
-          navigate("/dashboard");
+        if (loginUser.fulfilled.match(result)) {
+          toast.success('Login successful!');
+
+        } else {
+
+          const errorMessage = result.payload || 'Login failed';
+          toast.error(errorMessage);
         }
       } catch (error) {
-        toast.error(error.response?.data?.message);
+        console.error('Login error:', error);
+        toast.error('An unexpected error occurred');
       }
     }
   };
-
 
   return (
     <div className="min-h-screen flex">
@@ -102,8 +119,7 @@ const SigninPage = () => {
             <p className="text-gray-600">Join us and start managing your shops</p>
           </div>
 
-          <div className="space-y-6">
-
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
                 <User className="h-4 w-4" />
@@ -113,12 +129,13 @@ const SigninPage = () => {
                 type="text"
                 value={formData.username}
                 onChange={(e) => handleInputChange('username', e.target.value)}
-                className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500"
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 ${errors.username ? 'border-red-500' : 'border-gray-300'
+                  }`}
                 placeholder="Enter your username"
+                disabled={loading}
               />
               {errors.username && <p className="text-red-500 text-sm">{errors.username}</p>}
             </div>
-
 
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
@@ -130,47 +147,68 @@ const SigninPage = () => {
                   type={showPassword ? 'text' : 'password'}
                   value={formData.password}
                   onChange={(e) => handleInputChange('password', e.target.value)}
-                  className={`w-full px-4 py-3 pr-12 border rounded-lg ${errors.password ? 'border-red-500' : 'border-gray-300'
+                  className={`w-full px-4 py-3 pr-12 border rounded-lg focus:ring-2 focus:ring-purple-500 ${errors.password ? 'border-red-500' : 'border-gray-300'
                     }`}
                   placeholder="Enter your password"
+                  disabled={loading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                  disabled={loading}
                 >
                   {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
               </div>
               {errors.password && <p className="text-red-500 text-sm">{errors.password}</p>}
             </div>
+
             <div className="flex items-center gap-2">
               <input
                 type="checkbox"
                 checked={agreeTerms}
                 onChange={() => setAgreeTerms(!agreeTerms)}
                 id="agreeTerms"
+                disabled={loading}
               />
               <label htmlFor="agreeTerms" className="text-sm text-gray-700">
                 Remember Me
               </label>
             </div>
-            {errors.terms && <p className="text-red-500 text-sm">{errors.terms}</p>}
+
+            {/* Show Redux error if any */}
+            {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+
             <button
-              type="button"
-              onClick={handleSubmit}
-              className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white py-3 rounded-lg font-semibold hover:from-purple-700 hover:to-blue-700 transition"
+              type="submit"
+              disabled={loading}
+              className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white py-3 rounded-lg font-semibold hover:from-purple-700 hover:to-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
             >
-              Create Account
+              {loading ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                  Signing In...
+                </>
+              ) : (
+                'Sign In'
+              )}
             </button>
-          </div>
+          </form>
 
           <div className="text-center text-sm text-gray-600">
-            Already have an account?{' '}
-            <button     onClick={handleSignUpClick} className="text-purple-600 hover:text-purple-800 font-medium">Sign Up</button>
+            Don't have an account?{' '}
+            <button
+              onClick={handleSignUpClick}
+              className="text-purple-600 hover:text-purple-800 font-medium"
+              disabled={loading}
+            >
+              Sign Up
+            </button>
           </div>
         </div>
       </div>
+
       <div className="flex-1 bg-gradient-to-br from-slate-900 via-gray-900 to-black flex items-center justify-center relative overflow-hidden">
         {/* Background Pattern */}
         <div className="absolute inset-0 opacity-10">

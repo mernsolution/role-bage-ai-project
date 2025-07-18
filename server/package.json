@@ -5,24 +5,32 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "nodemon index.js",
+    "start": "node index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "MD Rubel",
   "license": "ISC",
   "keywords": [],
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.13.2",
     "bcryptjs": "^3.0.2",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "express-rate-limit": "^7.5.0",
+    "google-auth-library": "^10.1.0",
+    "googleapis": "^150.0.1",
     "helmet": "^8.1.0",
     "hpp": "^0.2.3",
+    "ioredis": "^5.6.1",
     "jsonwebtoken": "^9.0.2",
+    "mammoth": "^1.9.1",
     "mongoose": "^8.15.1",
-    "nodemon": "^3.1.10",
+    "multer": "^2.0.2",
+    "node-cron": "^4.2.1",
+    "openai": "^5.8.0",
+    "uuid": "^11.1.0",
     "xss": "^1.0.15"
   }
 }

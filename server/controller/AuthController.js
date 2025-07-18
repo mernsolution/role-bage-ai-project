@@ -1,76 +1,65 @@
-import AuthModelData from '../schemaModel/AuthSchemaModel.js';
+import AuthModelData from "../schemaModel/AuthSchemaModel.js";
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken"
+import jwt from "jsonwebtoken";
 
 const userSignup = async (req, res) => {
   try {
-    const { username, password, shopNames } = req.body;
+    const { username, email, password, role } = req.body;
 
-    if (!username || !password || !Array.isArray(shopNames) || shopNames.length < 3) {
+    // Validation
+    if (!username || !email || !password) {
       return res.status(400).json({
-        message: 'Username, password, and at least 3 shop names are required.'
+        message: "Username, email, and password are required.",
       });
     }
 
+    // Check if user already exists
+    const existingUser = await AuthModelData.findOne({
+      $or: [{ userName: username }, { email: email }],
+    });
+
+    if (existingUser) {
+      return res.status(409).json({
+        message: "Username or email already exists",
+      });
+    }
+
+    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create new user
     const newUser = new AuthModelData({
       userName: username,
+      email: email,
       password: hashedPassword,
-      shopName: shopNames
+      role: role || "user",
     });
 
     await newUser.save();
+
+    // Create safe user object (without password)
     const safeUser = {
       id: newUser._id,
       userName: newUser.userName,
-      shopName: newUser.shopName
+      email: newUser.email,
+      role: newUser.role,
     };
 
+    // Generate JWT token
+    const token = jwt.sign(
+      { userId: newUser._id, role: newUser.role },
+      process.env.JWT_SECRET || "your-secret-key",
+      { expiresIn: "24h" }
+    );
+
     res.status(201).json({
-      message: 'User registered successfully',
-      user: safeUser
+      message: "User registered successfully",
+      user: safeUser,
+      token: token,
     });
   } catch (err) {
-    console.error('Signup error:', err);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-};
-
-
-const checkShopNameAvailability = async (req, res) => {
-  try {
-    const { shopName } = req.query;
-    if (!shopName) {
-      return res.status(400).json({ message: 'Shop name is required' });
-    }
-    const existingShop = await AuthModelData.findOne({ shopName: shopName });
-    if (existingShop) {
-      return res.status(200).json({ available: false, message: 'Shop name is already taken' });
-    } else {
-      return res.status(200).json({ available: true, message: 'Shop name is available' });
-    }
-  } catch (error) {
-    console.error('Error in checkShopNameAvailability:', error);
-    return res.status(500).json({ message: 'Server error' });
-  }
-};
-
-
-const checkUserNameAvailability = async (req, res) => {
-  try {
-    const { userName } = req.query;
-    if (!userName) {
-      return res.status(400).json({ message: 'Shop name is required' });
-    }
-    const existingShop = await AuthModelData.findOne({ userName: userName });
-    if (existingShop) {
-      return res.status(200).json({ available: false, message: 'Shop name is already taken' });
-    } else {
-      return res.status(200).json({ available: true, message: 'Shop name is available' });
-    }
-  } catch (error) {
-    console.error('Error in checkShopNameAvailability:', error);
-    return res.status(500).json({ message: 'Server error' });
+    console.error("Signup error:", err);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -109,14 +98,12 @@ const authLogin = async (req, res) => {
       }
     );
 
-res.cookie("authToken", token, {
-  httpOnly: true,
-  secure: true,
-  sameSite: "lax", 
-  maxAge: rememberMe ? 7 * 24 * 60 * 60 * 1000 : 30 * 60 * 1000,
-  domain: ".localhost", // ✅ allows all *.localhost subdomains
-});
-
+    res.cookie("authToken", token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "lax",
+      maxAge: rememberMe ? 7 * 24 * 60 * 60 * 1000 : 30 * 60 * 1000,
+    });
 
     const { password: _, ...userData } = user._doc;
 
@@ -134,27 +121,6 @@ res.cookie("authToken", token, {
     });
   }
 };
-
-const getShopNames = async (req, res) => {
-  try {
-    const token = req.cookies.authToken;
-
-    if (!token) return res.status(401).json({ message: "Unauthorized" });
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await AuthModelData.findById(decoded.id);
-
-    if (!user) return res.status(404).json({ message: "User not found" });
-
-    res.json({ data: user });
-  } catch (error) {
-    console.error("Token verification error:", error);
-    res.status(401).json({ message: "Unauthorized" });
-  }
-};
-
-
-
 const logout = (req, res) => {
   res.clearCookie("authToken", {
     httpOnly: true,
@@ -165,24 +131,67 @@ const logout = (req, res) => {
   res.status(200).json({ message: "Logged out successfully" });
 };
 
-const checkSession = (req, res) => {
-  debugger
-  const token = req.cookies.authToken;
-  if (!token) {
-    return res.status(401).json({
-      authenticated: false,
-      message: "No token found"
-    });
-  }
-
+const checkSession = async (req, res) => {
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || "dfhdiru238437@#");
-    res.status(200).json({ authenticated: true, user: decoded });
-  } catch (err) {
-    console.log("JWT Verification Error:", err.message);
-    res.status(401).json({
+    // Get token from cookies
+    const token = req.cookies.authToken;
+
+    if (!token) {
+      return res.status(200).json({
+        authenticated: false,
+        user: null,
+        message: "No token provided",
+      });
+    }
+
+    // Verify token
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET || "fallbacksecret"
+    );
+
+    // Find user by ID from token
+    const user = await AuthModelData.findById(decoded.id).select("-password");
+
+    if (!user) {
+      return res.status(200).json({
+        authenticated: false,
+        user: null,
+        message: "User not found",
+      });
+    }
+
+    return res.status(200).json({
+      authenticated: true,
+      user: {
+        id: user._id,
+        name: user.userName,
+        email: user.email,
+        role: user.role,
+        credits: user.credits || 100,
+        createdAt: user.createdAt,
+      },
+      message: "Session valid",
+    });
+  } catch (error) {
+    console.error("Session check error:", error);
+
+    // Token expired or invalid
+    if (
+      error.name === "JsonWebTokenError" ||
+      error.name === "TokenExpiredError"
+    ) {
+      return res.status(200).json({
+        authenticated: false,
+        user: null,
+        message: "Invalid or expired token",
+      });
+    }
+
+    return res.status(500).json({
       authenticated: false,
-      message: "Invalid token"
+      user: null,
+      message: "Server error during session check",
     });
   }
 };
@@ -192,7 +201,4 @@ export default {
   authLogin,
   logout,
   checkSession,
-  getShopNames,
-  checkShopNameAvailability,
-  checkUserNameAvailability,
 };
